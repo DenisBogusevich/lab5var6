@@ -1,45 +1,64 @@
 package com.example.lab5var6
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-class EarthquakeViewModel : ViewModel() {
-    private val _earthquakes = MutableStateFlow<List<EarthquakeFeature>>(emptyList())
-    val earthquakes: StateFlow<List<EarthquakeFeature>> = _earthquakes
+class EarthquakeViewModel(application: Application) : AndroidViewModel(application) {
+    private val db = EarthquakeDb(application)
+    private val _earthquakes = MutableStateFlow<List<Earthquake>>(emptyList())
+    val earthquakes: StateFlow<List<Earthquake>> = _earthquakes
 
-    fun fetchEarthquakes(startTime: String, endTime: String) {
+    private val _history = MutableStateFlow<List<Earthquake>>(emptyList())
+    val history: StateFlow<List<Earthquake>> get() = _history
+    init {
         viewModelScope.launch {
-            println(startTime)
-            println(endTime)
-            try {
-                val response = RetrofitInstance.api.getEarthquakes(startTime = startTime, endTime = endTime)
-                println(response)
-                _earthquakes.value = response.features
-                println(_earthquakes.value)
-            } catch (e: Exception) {
-                // Handle exception
-                println(e)
+            fromDatabase()
+        }
+    }
+    private suspend fun fromDatabase() {
+        withContext(Dispatchers.IO) {
+            _history.value = db.getAllEarthquakes()
+
+        }
+    }
+    fun run(startTime: String, endTime: String) {
+        viewModelScope.launch {
+                val response =
+                    RetrofitInstance.api.getEarthquakes(startTime = startTime, endTime = endTime)
+                val earthquakePropertiesList = response.features.map { it }
+                _earthquakes.value = earthquakePropertiesList
+                saveEarthquakesToDatabase(earthquakePropertiesList)
+        }
+    }
+
+    private suspend fun saveEarthquakesToDatabase(earthquakePropertiesList: List<Earthquake>) {
+        withContext(Dispatchers.IO) {
+            for (earthquake in earthquakePropertiesList) {
+                db.insertEarthquake(earthquake)
             }
+            fromDatabase()
+        }
+    }
+    fun clearAllEarthquakes() {
+        viewModelScope.launch(Dispatchers.IO) {
+            db.clearAllEarthquakes()
+            _history.value = db.getAllEarthquakes()
         }
     }
 }
 
 
 data class EarthquakeResponse(
-    val features: List<EarthquakeFeature>
+    val features: List<Earthquake>
 )
 
-data class EarthquakeFeature(
-    val properties: EarthquakeProperties
-)
 
-data class EarthquakeProperties(
-    val place: String,
-    val time: Long
-)
+
+
+

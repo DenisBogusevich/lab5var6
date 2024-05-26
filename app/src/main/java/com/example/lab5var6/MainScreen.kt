@@ -21,12 +21,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -45,7 +44,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EarthquakeScreen(viewModel: EarthquakeViewModel) {
+fun EarthquakeScreen(navController: NavController, viewModel: EarthquakeViewModel) {
 
     val earthquakes by viewModel.earthquakes.collectAsState()
 
@@ -59,6 +58,11 @@ fun EarthquakeScreen(viewModel: EarthquakeViewModel) {
                 Modifier.background(Color.Blue)
             )
         },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { navController.navigate("history") }) {
+                Icon(Icons.Default.Menu, contentDescription = "history")
+            }
+        }
 
         ) { innerPadding ->
         Column(
@@ -79,7 +83,7 @@ fun EarthquakeScreen(viewModel: EarthquakeViewModel) {
                 DatePicker(label = "End Date", onDateSelected = { end = it })
             }
             Button(
-                onClick = { viewModel.fetchEarthquakes(start, end) },
+                onClick = { viewModel.run(start, end) },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Search")
@@ -131,7 +135,7 @@ fun DatePicker(label: String, onDateSelected: (String) -> Unit) {
 
 
 @Composable
-fun EarthquakeList(earthquakes: List<EarthquakeFeature>) {
+fun EarthquakeList(earthquakes: List<Earthquake>) {
     LazyColumn {
         items(earthquakes) { earthquake ->
             EarthquakeItem(earthquake)
@@ -140,9 +144,9 @@ fun EarthquakeList(earthquakes: List<EarthquakeFeature>) {
 }
 
 @Composable
-fun EarthquakeItem(earthquake: EarthquakeFeature) {
+fun EarthquakeItem(earthquake: Earthquake) {
     val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-    val date = Date(earthquake.properties.time)
+    val date = Date(earthquake.time)
     val formattedDate = sdf.format(date)
     Card(
         modifier = Modifier
@@ -153,7 +157,7 @@ fun EarthquakeItem(earthquake: EarthquakeFeature) {
 
         Column(modifier = Modifier
             .padding(8.dp)) {
-            Text(text = "Place: ${earthquake.properties.place}")
+            Text(text = "Place: ${earthquake.place}")
             Text(text = "Date: $formattedDate")
         }
     }
