@@ -4,6 +4,7 @@ import android.app.DatePickerDialog
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,93 +29,33 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 
 class MainActivity : ComponentActivity() {
+    private val viewModel: EarthquakeViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
-            EarthquakeApp(EarthquakeViewModel())
+            MaterialTheme {
+                val navController = rememberNavController()
+                NavHost(navController = navController, startDestination = "main") {
+                    composable("main") { EarthquakeApp(navController, viewModel) }
+                    composable("history") { HistoryScreen(navController, viewModel) }
+                }
+            }
         }
     }
 }
 
-@Composable
-fun EarthquakeApp(earthquakeViewModel: EarthquakeViewModel) {
-
-    val earthquakes by earthquakeViewModel.earthquakes.collectAsState()
-
-    var startDate by remember { mutableStateOf("") }
-    var endDate by remember { mutableStateOf("") }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        DatePicker(label = "Start Date", onDateSelected = { startDate = it })
-        Spacer(modifier = Modifier.height(8.dp))
-        DatePicker(label = "End Date", onDateSelected = { endDate = it })
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { earthquakeViewModel.fetchEarthquakes(startDate, endDate) }) {
-            Text("Search")
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        EarthquakeList(earthquakes)
-    }
-}
-
-@Composable
-fun DatePicker(label: String, onDateSelected: (String) -> Unit) {
-    val context = LocalContext.current
-    val calendar = Calendar.getInstance()
-    val datePickerDialog = DatePickerDialog(
-        context,
-        { _, year, month, dayOfMonth ->
-            val date = "$year-${month + 1}-$dayOfMonth"
-            onDateSelected(date)
-        },
-        calendar.get(Calendar.YEAR),
-        calendar.get(Calendar.MONTH),
-        calendar.get(Calendar.DAY_OF_MONTH)
-    )
-
-    OutlinedButton(onClick = { datePickerDialog.show() }) {
-        Text(label)
-    }
-}
-
-@Composable
-fun EarthquakeList(earthquakes: List<EarthquakeFeature>) {
-    LazyColumn {
-        items(earthquakes) { earthquake ->
-            EarthquakeItem(earthquake)
-        }
-    }
-}
-
-@Composable
-fun EarthquakeItem(earthquake: EarthquakeFeature) {
-    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-    val date = Date(earthquake.properties.time)
-    val formattedDate = sdf.format(date)
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-
-    ) {
-
-    Column(modifier = Modifier.padding(8.dp)) {
-        Text(text = "Place: ${earthquake.properties.place}")
-        Text(text = "Date: $formattedDate")
-    }
-    }
-}
