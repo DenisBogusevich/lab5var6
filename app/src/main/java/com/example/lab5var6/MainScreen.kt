@@ -45,7 +45,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EarthquakeApp(viewModel: EarthquakeViewModel) {
+fun EarthquakeScreen(viewModel: EarthquakeViewModel) {
 
     val earthquakes by viewModel.earthquakes.collectAsState()
 
